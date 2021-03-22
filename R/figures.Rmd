@@ -72,7 +72,7 @@ library(grid)
 ```
 
 ```{r, dir, echo=FALSE, message=FALSE}
-dirMy ="/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI"
+dirMy ="/home/laurence-kell/Desktop/papers/COM"
 dirDat=file.path(dirMy,"data")
 dirRes=file.path(dirMy,"results")
 dirInp=file.path(dirMy,"inputs") 
@@ -119,7 +119,7 @@ trendPhaseMar(trks,pts,ylim=5)
 
 ```{r, ts-c, fig.height=4, fig.width=8}
 library(grid)
-load(file.path(dirDat,"msy.RData"))
+load(file.path("/home/laurence-kell/Dropbox/FAO-VoI/data","msyts.RData")) 
 
 trks=transmute(subset(msy,year%in%1950:2012),run=scenario,year=year,series=series)
 pts =ddply(trks,.(run), function(x) subset(trks,year==max(year)))

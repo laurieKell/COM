@@ -587,11 +587,11 @@ taxa=merge(fao_taxa[[1]],fao_taxa[[2]])
 ```
 
 ```{r}
-load("/home/laurence-kell/Desktop/projects/fao/catch-only/data/DBdata.RData")
-load("/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/data/ts.RData")
+load("/home/laurence-kell/Dropbox/FAO-VoI/data/DBdata.RData")
+load("/home/laurence-kell/Dropbox/FAO-VoI/data/ts.RData")
 
 msy=transmute(subset(timeseries,tsid%in%"CdivMSY-ratio"&assessid%in%unique(ts$assessid)),year=tsyear,series=tsvalue,scenario=assessid)
 
-save(msy,file=file.path(sirDat,"msy.RData"))
+save(msy,file=file.path(dirDat,"msy.RData"))
 ```
 
