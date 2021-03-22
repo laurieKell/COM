@@ -1,0 +1,597 @@
+---
+title: "FAO VoI" 
+subtitle: "Datasets"
+author: "Laurence Kell"
+output: rmarkdown:::html_document
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEncoding{UTF-8}
+tags: FLPKG FLR
+license: Creative Commons Attribution-ShareAlike 4.0 International
+---
+  
+```{r knitr_init, echo=FALSE, results="hide"}
+library(knitr)
+## Global options
+opts_chunk$set(echo    =FALSE,
+               eval    =TRUE,
+               cache   =TRUE,
+               cache.path="cache/data/",
+               prompt  =FALSE,
+               comment =NA,
+               message =FALSE,
+               tidy    =FALSE,
+               warning =FALSE,
+               fig.height=6,
+               fig.width =10,
+               fig.path  ="../tex/figs/data-",
+               dev       ="png")
+
+options(digits=3)
+
+iFig=0
+```
+
+```{r, pkgs, echo=FALSE, message=FALSE}
+library(reshape)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+library(kobe)
+
+library(diags)
+library(r4ss)
+
+library(FLCore)
+library(FLife)
+library(popbio)
+library(mydas)
+```
+
+```{r, data, echo=FALSE, message=FALSE}
+dirMy ="/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI"
+dirInp=file.path(dirMy,"inputs") 
+dirDat=file.path(dirMy,"data")
+dirRes=file.path(dirMy,"results")
+
+## Myers database
+load(file.path(dirDat,"DBdata.RData"))
+stockid=stock
+names(stockid)[3]="species" 
+
+## Fishbase
+load(file.path(dirDat,"fb.RData"))
+
+## FAO Taxa
+load(file.path(dirDat,"fao_taxa.rda"))
+```
+
+
+```{r, data, echo=FALSE, message=FALSE}
+source('~/Desktop/flr/diags/R/ss-prd.R')
+
+source('~/Desktop/flr/kobe/R/kobe-generics.R')
+source('~/Desktop/flr/kobe/R/fao-phaseMar.R')
+source('~/Desktop/flr/kobe/R/fao-phase.R')
+```
+
+```{r, key}
+key=c("B","Biomass; may be either total biomass or spawning stock biomass",
+      "Bmgt"," Biomass at management target reference point",
+      "Bmsy"," Biomass at MSY",
+      "Cadv"," Scientifically advised catch",
+      "CdivMSY","Catch divided by MSY",
+      "Cpair","Catch corresponding to TAC and Cadv",
+      "CPUE"," Catch per unit effort",
+      "EFFORT","Measure of fishing effort (depends on fishery)",
+      "ER","Exploitation rate (annual proportion)",
+      "F","Fishing mortality (instantaneous rate)",
+      "MSY","Maximum Sustainable Yield",
+      "RecC","Recreational catch",
+      "SSB","Spawning stock biomass",
+      "survB","Survey biomass",
+      "TAC","Total allowable catch",
+      "TB","Total biomass",
+      "TC","Total catch",
+      "TL","Total landings",
+      "TN","Total abundance; in numbers",
+      "U","Harvest rate; may be either exploitation rate or fishing mortality",
+      "Umsy","Harvest rate at MSY",
+      "Umgt","Harvest rate at management target reference point")
+nms=key[seq(2,44,2)]
+names(nms)=key[seq(1,44,2)]
+
+bbmsy =c("SSBdivSSBmsy-dimensionless",
+         "SSBdivSSBmsy-calc-dimensionless",
+         "TBdivTBmsy-dimensionless",
+         "TBdivTBmsy-calc-dimensionless",
+         "TNdivTNmsy-calc-dimensionless",
+         "SSBdivSSBmgt-dimensionless",
+         "SSBdivSSBmgt-calc-dimensionless",
+         "TBdivTBmgt-dimensionless",
+         "TBdivTBmgt-calc-dimensionless",
+         "SSBdivSSBmsy-conv-dimensionless",
+         "TBdivTBmsy-conv-dimensionless",
+         "SSBdivSSBmsy-est-dimensionless",
+         "TBdivTBmsy-est-dimensionless")
+
+ffmsy =c("ERdivERmsy-dimensionless",
+         "ERdivERmsy-calc-dimensionless",
+         "FdivFmsy-dimensionless",
+         "FdivFmsy-calc-dimensionless",
+         "ERdivERmgt-dimensionless",
+         "ERdivERmgt-calc-dimensionless",
+         "FdivFmgt-dimensionless",
+         "FdivFmgt-calc-dimensionless",
+         "ERdivERmsy-conv-dimensionless",
+         "FdivFmsy-conv-dimensionless",
+         "ERdivERmsy-est-dimensionless")
+
+bbmgt =c("SSBdivSSBmgt-dimensionless",
+         "SSBdivSSBmgt-calc-dimensionless",
+         "TBdivTBmgt-dimensionless",
+         "TBdivTBmgt-calc-dimensionless",
+         "SSBdivSSBmsy-dimensionless",
+         "SSBdivSSBmsy-calc-dimensionless",
+         "TBdivTBmsy-dimensionless",
+         "TBdivTBmsy-calc-dimensionless",
+         "TNdivTNmsy-calc-dimensionless",
+         "SSBdivSSBmsy-conv-dimensionless",
+         "TBdivTBmsy-conv-dimensionless",
+         "SSBdivSSBmsy-est-dimensionless",
+         "TBdivTBmsy-est-dimensionless")
+
+ffmgt =c("ERdivERmgt-dimensionless",
+         "ERdivERmgt-calc-dimensionless",
+         "FdivFmgt-dimensionless",
+         "FdivFmgt-calc-dimensionless",
+         "ERdivERmsy-dimensionless",
+         "ERdivERmsy-calc-dimensionless",
+         "FdivFmsy-dimensionless",
+         "FdivFmsy-calc-dimensionless",
+         "ERdivERmsy-conv-dimensionless",
+         "FdivFmsy-conv-dimensionless",
+         "ERdivERmsy-est-dimensionless")
+
+stock=c("TB-MT",
+        "SSB-MT")
+
+yield=c("TC-MT",
+        "TL-MT")
+
+f    =c("ER-ratio",
+        "ER-calc-ratio")
+
+bmsy =c("TBmsy-MT",
+        "TBmsy-pr-MT",
+        "TBmsy-extr-MT",
+        "TBmsy-calc-MT",
+        "SSBmsy-MT (converted)",
+        "SSBmsy-pr-MT (converted)",
+        "SSBmsy-extr-MT (converted)",
+        "SSBmsy-calc-MT (converted)",
+        "TB0-MT (converted)",
+        "SSB0-MT (converted)",
+        "TBmsy-conv-MT",
+        "SSBmsy-conv-MT (converted)",
+        "TBmsy-est-MT",
+        "SSBmsy-est-MT (converted)")
+
+hmsy  =c("ERmsy-ratio",
+         "ERmsy-pr-ratio",
+         "ERmsy-extr-ratio",
+         "ERmsy-calc-ratio",
+         "ERmsy-mvo-ratio",
+         "ERmsy-conv-ratio",
+         "ERmsy-est-ratio")
+
+msy =c("MSY-MT",
+       "MSY-calc-MT",
+       "MSY-mvo-MT",
+       "MSY-conv-MT",
+       "MSY-est-MT")
+
+bmgt=c("TBmgt-MT",
+       "SSBmgt-MT (converted)")
+
+hmgt=c("ERmgt-ratio")
+
+dat=c("B","Biomass; may be either total biomass or spawning stock biomass",
+      "Bmgt","Biomass at management target reference point",
+      "Bmsy","Biomass at MSY",
+      "Cadv","Scientifically advised catch",
+      "CdivMSY","Catch divided by MSY",
+      "Cpair","Catch corresponding to TAC and Cadv",
+      "CPUE","Catch per unit effort",
+      "EFFORT","Measure of fishing effort (depends on fishery)",
+      "ER","Exploitation rate (annual proportion)",
+      "F","Fishing mortality (instantaneous rate)",
+      "MSY","Maximum Sustainable Yield",
+      "RecC","Recreational catch",
+      "SSB","Spawning stock biomass",
+      "survB","Survey biomass",
+      "TAC","Total allowable catch",
+      "TB","Total biomass",
+      "TC","Total catch",
+      "TL","Total landings",
+      "TN","Total abundance; in numbers",
+      "U","Harvest rate; may be either exploitation rate or fishing mortality",
+      "Umsy","Harvest rate at MSY",
+      "Umgt","Harvest rate at management target reference point")
+acronyms=dat[seq(2,length(dat),2)]
+names(acronyms)=dat[seq(1,length(dat),2)]
+rm(dat)
+
+key=list("acronyms"=acronyms,"bbmgt"=bbmgt,"bbmsy"=bbmsy,"bmgt"=bmgt,"bmsy"=bmsy,"f"=f,"ffmgt"=ffmgt,"ffmsy"=ffmsy,"hmgt"=hmgt,"hmsy"=hmsy,"key"=key,"msy"=msy,"stock"=stock,"yield"=yield) 
+  
+save(key,assessment,file=file.path(dirRes,"key.RData"))
+  
+stock  =transform(subset(timeseries,tsid%in%sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%bbmsy]),year=tsyear,bbmsy=tsvalue)[,-(5:6)]
+harvest=transform(subset(timeseries,tsid%in%sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%ffmsy]),year=tsyear,ffmsy=tsvalue)[,-(5:6)]
+catch  =transform(subset(timeseries,tsid%in%sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%yield]),year=tsyear,catch=tsvalue)[,-(5:6)]
+
+stock$tsid  =factor(stock$tsid,  levels=bbmsy)
+harvest$tsid=factor(harvest$tsid,levels=ffmsy)
+catch$tsid  =factor(catch$tsid,  levels=yield)
+```
+
+
+## Time Series
+
+Summary of variables in the RAM Legacy database 
+
+#### Spawning stock biomass
+```{r}
+sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%bbmsy][1:4]
+```
+
+#### Total Biomass
+```{r}
+sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%bbmsy][5:8]
+```
+
+#### Fishing mortality (instantaneous rate)
+```{r}
+sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%ffmsy][5:8]
+```
+
+#### Exploitation rate (annual proportion)
+```{r}
+sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%ffmsy][1:4]
+```
+
+#### Total catch
+```{r}
+sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%yield][1]
+```
+
+#### Total landings 
+```{r}
+sort(unique(timeseries$tsid))[sort(unique(timeseries$tsid))%in%yield][2]
+```
+
+```{r, check}
+## Filter on availability of time series of $SSB:B_{MSY}$ and $F:F_{MSY}$
+sid=subset(timeseries, tsid%in%c("SSBdivSSBmsy-dimensionless","FdivFmsy-dimensionless","TC-MT"))
+chk=with(sid,table(assessid,tsid))
+
+pass=names(chk[chk[,1]>0&chk[,2],])
+
+sid=dimnames(chk[chk[,1]>0&chk[,2],])$assessid
+ts=subset(timeseries, assessid%in%sid&tsid%in%c("SSBdivSSBmsy-dimensionless","FdivFmsy-dimensionless","SSB-MT","TC-MT","TL-MT"))
+ts=cast(ts,assessid+stockid+stocklong+tsyear~tsid)
+
+names(ts)[4:9]=c("year","harvest","ssb","stock","catch","landings")
+ts$u=1-exp(-ts$harvest)
+ts=transform(ts,catch=ifelse(is.na(catch),landings,catch))
+
+ts=subset(ts,(!is.na(stock)|!is.na(catch)))
+save(ts,file=file.path(dirDat,"ts.RData"))
+```
+
+
+```{r, indices}
+area=read.csv("~/Desktop/projects/fao/VoI/Report/FAO-VoI/inputs/depletionbyarea.csv")
+names(stockid)[9]="area"
+area=merge(subset(stockid,stockid%in%unique(ts$stockid))[,c("stockid","area")],area)[,c("stockid","area","expected","cv")]
+
+eff=read.csv("/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/inputs/MappedFAO.csv")
+eff=ddply(subset(eff,FAO%in%unique(area$area)),.(FAO,Year), with, data.frame(effort=sum(EffortCellReportedNom)))
+names(eff)=c("area","year","effort")
+
+sar=read.csv(file.path(dirInp,"sardata.csv"))[,-1]
+
+fmi=read.csv(file.path(dirInp,"fmidata.csv"))
+
+save(sid,assessment,stockid,area,eff,sar,fmi,file=file.path(dirRes,"faoIndices.RData")) 
+```
+
+```{r, tRFMO}
+getPath <- function(file) {
+  if (!grepl(.Platform$file.sep,file))
+    res <- getwd()
+  else
+    res <- substr(file,1,max(gregexpr(.Platform$file.sep,file)[[1]])-1)
+  return(res)}
+
+getFile<-function(file) {
+  res <- substr(file,max(gregexpr(.Platform$file.sep,file)[[1]])+1,
+                nchar(file))
+  return(res)}
+
+getRAM<-function(x){
+  rf =getRf(x)
+  sp =spFunc(x)[-1,]
+  res=transform(sp,stock=ssb/rf[1,"ssbmsy"])
+  res=cbind(res,"harvest"=x$Kobe[seq(dim(res)[1]),3])
+  res}
+
+dirAss="/home/laurence-kell/Dropbox/jabba_laurie/jabba_assessments"
+dir   =system2("ls",args=dirAss,stdout=TRUE)
+dir=dir[dir.exists(file.path(dirAss,dir))]
+dir=dir[file.exists(file.path(dirAss,dir,"lkout.rdata"))]
+
+jb=mdply(dir,function(x) {
+     load(file.path(dirAss,x,"lkout.rdata"))
+     cbind(assessid=x,lkout)})[,-1]
+
+jb$assessid=jb$stockid
+
+ss=data.frame(
+file=c(file.path(c("/home/laurence-kell/Dropbox/xval/io-bet",
+                   "/home/laurence-kell/Dropbox/xval/io-yft",
+                   "/home/laurence-kell/Dropbox/xval/epo-bet",
+                   "/home/laurence-kell/Dropbox/xval/epo-yft",
+                   "/home/laurence-kell/Dropbox/xval/iccat-bet",
+                   "/home/laurence-kell/Dropbox/xval/iccat-yft"),"base"),
+  file.path("/home/laurence-kell/Desktop/rfmo/iccat/sc-eco/2020/inputs/ss",c("sma/2019/run1",
+                                                                             "bum/2018",
+                                                                             "whm/2019/run6",
+                                                                             "swon/2017/run1"))),
+assessid=c("io-bet","io-yft","epo-bet","epo-yft","iccat-bet","iccat-yft","iccat-sma","iccat-bum","iccat-whm","iccat-swo"),
+species=c("Thunnus obesus","Thunnus albacares",
+          "Thunnus obesus","Thunnus albacares",
+          "Thunnus obesus","Thunnus albacares",
+          "Isurus oxyrinchus",
+          "Makaira nigricans",
+          "Kajikia albida",
+          "Xiphias gladius"))
+dat=ldply(dlply(ss,.(assessid,species), with, getSS(file)),getTs)
+
+dt1=ddply(transform(cbind(subset(dat,assessid%in%ss[1:4,2]),qrtr=1:4),year=year-qrtr),.(assessid,species,year), with, 
+             data.frame(year=(year[1]+3)/4,stock=stock[1],harvest=harvest[1],biomass=biomass[1],ssb=ssb[1],catch=sum(catch)))
+ss=rbind.fill(dt1,subset(dat,!assessid%in%unique(dt1$assessid)))
+trfmo=rbind.fill(ss,jb)
+#trfmo=rbind(ddply(subset(trfmo,year<1000),.(assessid),transform, year=year+2018-max(year)),
+#            subset(trfmo,year>1000))
+
+nms=data.frame(
+assessid=c("iccat-bet","epo-bet","io-bet",
+           "iccat-yft","epo-yft","io-yft",
+           "albsatl_iccat",
+           "iccat-swo","swo_iotc","swo_natl","swo_satl","swomed_iccat",
+           "iccat-bum","bum_iccat","bum_iotc",
+           "iccat-whm","whm_iccat",
+           "mls_iotc",
+           "skj_iotc",
+           "smanatl_iccat","iccat-sma",
+           "bsh_iotc"),
+species=c("Thunnus obesus","Thunnus obesus","Thunnus obesus",
+          "Thunnus albacares","Thunnus albacares","Thunnus albacares",
+          "Thunnus alalunga",
+          "Xiphias gladius","Xiphias gladius","Xiphias gladius","Xiphias gladius","Xiphias gladius",
+          "Makaira nigricans","Makaira nigricans","Makaira nigricans",
+          "Kajikia albida","Kajikia albida",
+          "Kajikia audax",
+          "Katsuwonus pelamis",
+          "Isurus oxyrinchus","Isurus oxyrinchus",
+          "Prionace glauca"))
+trfmo=rbind.fill(transform(ss,stockid=paste(assessid,"ss",sep="-")),
+                 transform(jb,stockid=paste(assessid,"jabba",sep="-")))
+trfmo=merge(trfmo[,-2],nms,by="assessid")
+trfmo=ddply(trfmo,.(assessid), transform, year=year+ifelse(max(year),2018-max(year),0))
+  
+ggplot(trfmo)+
+  geom_line(aes(year,stock))+
+  facet_wrap(~assessid,scale="free")+
+  theme_bw()+
+  xlab("Year")+ylab(expression(B:B[MSY]))
+
+save(trfmo,file=file.path(dirDat,"trfmo.RData"))
+```
+
+
+```{r}
+load("file.path(dirDat,/ts.RData")
+load(file.path(dirRes,"trfmo.RData"))
+
+ts=rbind.fill(cbind("what"="RAM",merge(ts,stockid[,c("stockid","species")])),
+              cbind("what"="RFMO",trfmo))[,c("what","assessid","species","year","stock","catch","harvest")]
+
+ts=ddply(ts,.(what,assessid), with, {
+  dat=merge(data.frame(year=min(year,na.rm=T):max(year,na.rm=T)),
+            data.frame("species"=species,"year"=year,"stock"=stock,"catch"=catch,"harvest"=harvest),by="year",all.x=TRUE)})
+
+ts=subset(ts,(!is.na(catch))|(!is.na(stock))) 
+save(ts,file=file.path(dirDat,"ts.RData"))  
+```
+
+
+## Summary plots
+```{r, ts-catch}
+ggplot(ts)+  
+  geom_path(aes(year,catch,col=what))+
+  facet_wrap(~assessid,scale="free")+
+  theme_bw(0)+xlab("Year")+ylab("Catch")
+```
+
+**Figure `r iFig=iFig+1; iFig`** Timeseries of catch.
+
+
+```{r, ts-stock}
+ggplot(ts)+
+  geom_path(aes(year,stock,col=what))+
+  facet_wrap(~assessid,scale="free")+
+  theme_bw(0)+xlab("Year")+ylab(expression(SSB:B[MSY]))
+```
+
+**Figure `r iFig=iFig+1; iFig`** Timeseries of spawning stock biomass.
+
+```{r, ts-harvest}
+ggplot(ts)+
+  geom_path(aes(year,harvest,col=what))+
+  facet_wrap(~assessid,scale="free")+
+  theme_bw(0)+xlab("Year")+ylab("Harvest rate")
+```
+
+**Figure `r iFig=iFig+1; iFig`** Timeseries of harvest rate.
+
+```{r, sh}
+ggplot(ts)+  
+  geom_path(aes(stock,harvest,col=what))+
+  facet_wrap(~assessid,scale="free")+
+  theme_bw(0)+ylab("Harvest Rate")+xlab(expression(SSB:B[MSY]))
+```
+
+**Figure `r iFig=iFig+1; iFig`** Trajectories of harvest rate v spawning stock biomass.
+
+```{r, ts-sp, eval=FALSE}
+sp=ddply(subset(ts,!is.na(ssb)|is.na(catch)),.(assessid,what), with, {data.frame(year=year[-length(ssb)],
+                                           sp  =ssb[-1]-ssb[-length(ssb)]+catch[-length(ssb)],
+                                           ssb =ssb[-length(ssb)])})
+
+ggplot(sp)+
+  geom_path(aes(year,sp,col=what))+
+  facet_wrap(~assessid,scale="free")+
+  theme_bw(0)+xlab("Year")+ylab("Surplus Production")
+```
+
+
+```{r, trj-sp, eval=FALSE}
+sp=ddply(subset(ts,!is.na(ssb)),.(assessid,what), with, {data.frame(year=year[-length(ssb)],
+                                           sp  =ssb[-1]-ssb[-length(ssb)]+catch[-length(ssb)],
+                                           ssb =ssb[-length(ssb)])})
+
+ggplot(sp)+
+  geom_path(aes(ssb,sp,col=what))+
+  facet_wrap(~assessid,scale="free")+
+  theme_bw(0)+xlab("Year")+ylab("Surplus Production")
+```
+
+
+```{r, msy}
+names(stock)[3]="species"
+bioparams=subset(bioparams,assessid%in%sid)
+msy=subset(bioparams,bioid%in%c("SSBmsy-MT","MSY-MT","SSB0-MT"))
+msy=cast(msy,stockid+assessid~bioid,value="biovalue")
+names(msy)[3:5]=c("msy","K","bmsy")
+
+msy=mutate(msy, msy=as.numeric(as.character( msy)),
+                bmsy=as.numeric(as.character(bmsy)),
+                hmsy=msy/bmsy)
+
+msy$K=as.numeric(as.character(msy$K))
+msy$shape=msy$bmsy/msy$K
+msy=adply(msy, 1, function(x) data.frame(p=optimise(function(x,y) (y-(1/(1+x))^(1/x))^2,c(-0.9999,10),y=x$shape)$minimum))
+msy=transform(msy,r=(1+p)*(msy/bmsy))
+
+msy=subset(msy,!is.na(K))
+msy=merge(msy[,-7],stockid[,c("stockid","species")])
+
+save(msy,file=file.path(dirRes,"msy.RData"))  
+```
+
+```{r, lh}
+ts=merge(ts,stockid[,c("stockid","species")])
+lh=subset(fb,species%in%c(unique(ts$species),unique(trfmo$species)))
+
+#ref=merge(msy,stockid,by="stockid")
+lh[is.na(lh["lmat"]),"lmat"]=(lh[is.na(lh["lmat"]),"lmatmin"]+lh[is.na(lh["lmat"]),"lmatmax"])/2
+lh=ddply(lh,.(species), with, data.frame(k   =mean(k,   na.rm=T),
+                                         linf=mean(linf,na.rm=T),
+                                         t0  =mean(t0,  na.rm=T),
+                                         l50 =mean(lmat,na.rm=T),
+                                         a50 =mean(amat,na.rm=T),
+                                         a   =mean(a,   na.rm=T),
+                                         b   =mean(b,   na.rm=T)))
+
+lh$t0=pmin(-0.1,lh$t0)
+lh[,-1][is.na(lh[,-1])]=NA
+
+save(lh,file=file.path(dirRes,"lh.RData"))
+```
+
+```{r, kb}
+kb=rbind(ddply(ts,   .(assessid),with, data.frame(stock=stock[year==max(year)],harvest=harvest[year==max(year)]))[,c("stock","harvest")],
+         ddply(trfmo,.(assessid),with, data.frame(stock=stock[year==max(year)],harvest=harvest[year==max(year)]))[,c("stock","harvest")])
+
+kobePhaseMar(kb,xlim=4,ylim=4)
+```
+
+**Figure `r iFig=iFig+1; iFig`** Kobe Phase plot for selected RAM Legacy database and tRFMO assessments.
+
+```{r}
+library(grid)
+
+FAOPhaseMar(kb[,c("stock","harvest")],xlim=4,ylim=4)
+```
+
+**Figure `r iFig=iFig+1; iFig`** FAO plot for selected RAM Legacy database assessments and tRFMO assessments.
+
+```{r}
+msyNm=names(bioparams_values_views)[c(3:5,8,9,11,12,20)]
+mgtNm=names(bioparams_values_views)[c(6,7,14,15,16,17)]
+limNm=names(bioparams_values_views)[c(18,19,21,22,23,24)]
+```
+
+```{r, msy2, fig.width=8, fig.height=8}
+ggpairs(transmute(msy,r=r,shape=bmsy/K))+theme_bw() 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Relationship between population growth rate ($r$) and the ratio of $B_{MSY}:K$ (shape) based on selected data rich assessments.
+
+```{r, pd}
+load(file.path(dirRes,"lh.RData"))
+
+lh$a[is.na(lh$a)]=0.002
+lh$b[is.na(lh$b)]=3.0
+
+pd=mydas:::popdyn(lhPar(as(lh[,c("linf","k","t0","a","b","l50")],"FLPar")))
+dimnames(pd)$iter=lh$species
+
+lh.low=lhPar(as(lh[,c("linf","k","t0","a","b","l50")],"FLPar"))
+
+lh.low["m1"]=0.45
+lh.low[ "s"]=0.8
+
+pd.low=mydas:::popdyn(lhPar(lh.low))
+dimnames(pd.low)$iter=lh$species
+
+save(pd,pd.low,file=file.path(dirRes,"pd.RData"))  
+```
+
+```{r}
+cpue  =subset(timeseries,assessid%in%unique(ts$assessid)) #&substr(tsid,1,4)=="cpue")
+survey=subset(timeseries,assessid%in%unique(ts$assessid)&substr(tsid,1,4)=="surv")
+```
+
+```{r}
+cpue =subset(timeseries_assessments_views,stockid%in%unique(ts$stockid)&!is.na(CPUE) )$CPUE
+survB=subset(timeseries_assessments_views,stockid%in%unique(ts$stockid)&!is.na(survB))$survB
+```
+
+```{r}
+taxa=merge(fao_taxa[[1]],fao_taxa[[2]])
+```
+
+```{r}
+load("/home/laurence-kell/Desktop/projects/fao/catch-only/data/DBdata.RData")
+load("/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/data/ts.RData")
+
+msy=transmute(subset(timeseries,tsid%in%"CdivMSY-ratio"&assessid%in%unique(ts$assessid)),year=tsyear,series=tsvalue,scenario=assessid)
+
+save(msy,file=file.path(sirDat,"msy.RData"))
+```
+
