@@ -9,13 +9,21 @@ A draft manuscript describing the work can be found on Overleaf (https://www.ove
 
 ## Code
 
+All the code is available in this repository, using FLP and JABBA packages
+
 ## Data
 
-## RAM Legacy DB
+The data used are from the RAM Legacy DB for the stock time series and FishBase for life history priors. The data and results are not on this github repository, but stored in dropbox. They can be downloaded either manually or using the ‘rdrop2’ package https://cran.r-project.org/web/packages/rdrop2/rdrop2.pdf
+
+### RAM Legacy DB
 
 https://rpubs.com/laurie/744533
 
-## Priors
+### Priors
+
+https://github.com/fishnets/fishnets
+
+https://rpubs.com/laurie/744917
 
 ## Results
 
