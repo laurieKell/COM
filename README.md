@@ -40,17 +40,15 @@ load("com.RData")
 
 ### RAM Legacy DB
 
-https://rpubs.com/laurie/744533
+A summary of the assessment time series can be found at https://rpubs.com/laurie/744533
 
 ### Tuna RFMO
 
-https://rpubs.com/laurie/744958
+The extra tun stocks added to the RAM DB are summarised at https://rpubs.com/laurie/744958
 
 ### Priors
 
-https://github.com/fishnets/fishnets
-
-https://rpubs.com/laurie/744917
+The life history parameters were obtained from https://github.com/fishnets/fishnets and a summary of the priors for r are found at https://rpubs.com/laurie/744917
 
 ## Running
 
