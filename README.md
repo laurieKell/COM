@@ -20,6 +20,8 @@ Data used are from the RAM Legacy DB, for the stock assessment time series, and 
 
 Assuming you have a share to the COM folder in dropbox, there are folders for the `data`, and `results` which contain R data sets. `inputs` contains text files with assessment model results.
 
+Example of how to load data from dropbox
+
 ```{r, eval=FALSE}
 library(rdrop2)
 
