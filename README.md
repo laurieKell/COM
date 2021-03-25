@@ -10,6 +10,14 @@ To evaluate the ability of the models, and the value of additional infomation, t
 
 Results are found at https://rpubs.com/laurie/744918 and a draft manuscript describing the work can be found on Overleaf (https://www.overleaf.com/read/kwctdqrjftwd)
 
+## Tasks
+
+Develop a reference dataset from the RAM legacy DB for a set of stocks where time series of stock status, catch and MSY and virgin biomass reference points are known. Develop priors for the production function, i.e. r, K, and shape. Develop depletion priors.
+Run SRA+ (or equivalent model framework) to create a reference ”best case” assessment for the RAM database using catch and a perfect index of abundance.
+Conduct a Value-of-Information analysis by running SRA+ (or equivalent model framework) using different approaches for deriving priors for i) depletion, ii) r, iii) K, iv) shape of the production function and data availability and quality for indices of abundance and catch
+Evaluate the ability of the different approaches to i) estimate current stock status relative to FMSY, BMSY and K, and ii) trends in abundance.
+
+
 ## Code
 
 The code, based on the FLR and JABBA packages, is available from this repository.
@@ -53,12 +61,3 @@ The life history parameters were obtained from https://github.com/fishnets/fishn
 ## Running
 
 The simulation were run in parallel as array jobs on a Portable Batch System (PBS) see 'runCom.R' for the code and 'runCOM.qsub' for the PBS script, and `process.R` summarises the results
-
-
-Develop a reference dataset from the RAM legacy DB for a set of stocks where time series of stock status, catch and MSY and virgin biomass reference points are known.
-Develop priors for the production function, i.e. r, K, and shape.
-Develop depletion priors.
-Run SRA+ (or equivalent model framework) to create a reference ”best case” assessment for the RAM database using catch and a perfect index of abundance.
-Conduct a Value-of-Information analysis by running SRA+ (or equivalent model framework) using different approaches for deriving priors for i) depletion, ii) r, iii) K, iv) shape of the production function and data availability and quality for indices of abundance and catch
-Evaluate the ability of the different approaches to i) estimate current stock status relative to FMSY, BMSY and K, and ii) trends in abundance.
-
