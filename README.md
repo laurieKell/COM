@@ -15,6 +15,8 @@ All the code is available in this repository, using FLP and JABBA packages
 
 The data used are from the RAM Legacy DB for the stock time series and FishBase for life history priors. The data and results are not on this github repository, but stored in dropbox. They can be downloaded either manually or using the ‘rdrop2’ package https://cran.r-project.org/web/packages/rdrop2/rdrop2.pdf
 
+Assuming you have a share to the COM folder in dropbox, which has folders for the input data, and results
+
 ```{r, eval=FALSE}
 library(rdrop2)
 
