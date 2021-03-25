@@ -15,6 +15,18 @@ All the code is available in this repository, using FLP and JABBA packages
 
 The data used are from the RAM Legacy DB for the stock time series and FishBase for life history priors. The data and results are not on this github repository, but stored in dropbox. They can be downloaded either manually or using the ‘rdrop2’ package https://cran.r-project.org/web/packages/rdrop2/rdrop2.pdf
 
+```{r, eval=FALSE}
+library(rdrop2)
+
+## get and save token
+#token<-drop_auth()
+#saveRDS(token, "Dropbox/mydasOMs/token.RDS")
+
+drop_download(path='mydasOMs/turbot.RData',overwrite=T)
+load("turbot.RData")
+par=cbind(spp="turbot",model.frame(prior))
+```
+
 ### RAM Legacy DB
 
 https://rpubs.com/laurie/744533
