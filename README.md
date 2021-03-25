@@ -12,7 +12,7 @@ Results are found at https://rpubs.com/laurie/744918 and a draft manuscript desc
 
 ## Code
 
-The code, based on the FLR and JABBA packages, is available in this repository.
+The code, based on the FLR and JABBA packages, is available from this repository.
 
 ## Data
 
