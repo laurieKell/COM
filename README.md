@@ -19,12 +19,16 @@ The data used are from the RAM Legacy DB for the stock time series and FishBase 
 library(rdrop2)
 
 ## get and save token
-#token<-drop_auth()
-#saveRDS(token, "Dropbox/mydasOMs/token.RDS")
+token<-drop_auth()
+saveRDS(token, "Dropbox/token.RDS")
 
-drop_download(path='mydasOMs/turbot.RData',overwrite=T)
-load("turbot.RData")
-par=cbind(spp="turbot",model.frame(prior))
+## load time series from RAM Legacy DB
+drop_download(path='COM/data/ts.RData',overwrite=T)
+load("ts.RData")
+
+## load results
+drop_download(path='COM/results/com.RData',overwrite=T)
+load("com.RData")
 ```
 
 ### RAM Legacy DB
