@@ -42,6 +42,10 @@ load("com.RData")
 
 https://rpubs.com/laurie/744533
 
+### Tuna RFMO
+
+https://rpubs.com/laurie/744958
+
 ### Priors
 
 https://github.com/fishnets/fishnets
