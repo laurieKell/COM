@@ -1,0 +1,116 @@
+---
+title: "FAO VoI" 
+subtitle: "Priors for r"
+author: "Laurence Kell"
+output: rmarkdown:::html_document
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEncoding{UTF-8}
+tags: FLPKG FLR
+license: Creative Commons Attribution-ShareAlike 4.0 International
+---
+  
+```{r knitr_init, echo=FALSE, results="hide"}
+library(knitr)
+## Global options
+opts_chunk$set(echo    =FALSE,
+               eval    =TRUE,
+               cache   =TRUE,
+               cache.path="cache/data/",
+               prompt  =FALSE,
+               comment =NA,
+               message =FALSE,
+               tidy    =FALSE,
+               warning =FALSE,
+               fig.height=6,
+               fig.width =10,
+               fig.path  ="../tex/figs/data-",
+               dev       ="png")
+
+options(digits=3)
+
+iFig=0
+```
+
+```{r, pkgs, echo=FALSE, message=FALSE}
+library(reshape)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+library(kobe)
+
+library(FLCore)
+library(FLife)
+library(popbio)
+library(mydas)
+```
+
+```{r, dirs, echo=FALSE, message=FALSE}
+dirMy ="/home/laurence-kell/Desktop/papers/COM"
+dirInp=file.path(dirMy,"inputs") 
+dirDat=file.path(dirMy,"data")
+dirRes=file.path(dirMy,"results")
+```
+
+
+```{r, data, echo=FALSE, message=FALSE}
+## Time series
+load(file.path(dirDat,"ts.RData"))
+load(file.path(dirDat,"stockid.RData"))
+load(file.path(dirDat,"trfmo.RData"))
+
+## Fishbase
+load(file.path(dirDat,"fb.RData"))
+
+## FAO Taxa
+load(file.path(dirDat,"fao_taxa.RData"))
+```
+
+```{r, lh}
+ts=merge(ts,stockid[,c("stockid","species")])
+lh=subset(fb,species%in%c(unique(ts$species),unique(trfmo$species)))
+
+#ref=merge(msy,stockid,by="stockid")
+lh[is.na(lh["lmat"]),"lmat"]=(lh[is.na(lh["lmat"]),"lmatmin"]+lh[is.na(lh["lmat"]),"lmatmax"])/2
+lh=ddply(lh,.(species), with, data.frame(k   =mean(k,   na.rm=T),
+                                         linf=mean(linf,na.rm=T),
+                                         t0  =mean(t0,  na.rm=T),
+                                         l50 =mean(lmat,na.rm=T),
+                                         a50 =mean(amat,na.rm=T),
+                                         a   =mean(a,   na.rm=T),
+                                         b   =mean(b,   na.rm=T)))
+
+lh$t0=pmin(-0.1,lh$t0)
+lh[,-1][is.na(lh[,-1])]=NA
+
+save(lh,file=file.path(dirRes,"lh.RData"))
+```
+
+```{r, msy2, fig.width=8, fig.height=8}
+ggpairs(transmute(msy,r=r,shape=bmsy/K))+theme_bw() 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Relationship between population growth rate ($r$) and the ratio of $B_{MSY}:K$ (shape) based on selected data rich assessments.
+
+```{r, pd}
+load(file.path(dirRes,"lh.RData"))
+
+lh$a[is.na(lh$a)]=0.002
+lh$b[is.na(lh$b)]=3.0
+
+pd=mydas:::popdyn(lhPar(as(lh[,c("linf","k","t0","a","b","l50")],"FLPar")))
+dimnames(pd)$iter=lh$species
+
+lh.low=lhPar(as(lh[,c("linf","k","t0","a","b","l50")],"FLPar"))
+
+lh.low["m1"]=0.45
+lh.low[ "s"]=0.8
+
+pd.low=mydas:::popdyn(lhPar(lh.low))
+dimnames(pd.low)$iter=lh$species
+
+save(pd,pd.low,file=file.path(dirRes,"pd.RData"))  
+```
+
