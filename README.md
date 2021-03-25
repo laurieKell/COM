@@ -5,7 +5,7 @@ Model validation requires estimates to be compared to known values (i.e. observa
 
 We therefore configure the JABBA state-space biomass dynamic model (https://github.com/jabbamodel/JABBA) as a catch-only model using FLR (https://flr-project.org/). We then evaluate knowledge requirements, in the form of priors for population growth rate (r) and initial and final depletion, and the form of the production function, for catch-only models to provide assessments of stock status relative to maximum sustainable yield (MSY) targets reference points. We also compare catch-only models to assessments that use an index of relative abundance for calibration. To do this we use Receiver Operating Characteristic (ROC) curves to evaluate the ability of models and reference points to classify and rank stocks with respect to being overfished. 
 
-A draft manuscript describing the work can be found on Overleaf (https://www.overleaf.com/read/kwctdqrjftwd)
+Results are found at https://rpubs.com/laurie/744918 and a draft manuscript describing the work can be found on Overleaf (https://www.overleaf.com/read/kwctdqrjftwd)
 
 ## Code
 
