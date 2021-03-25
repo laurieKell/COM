@@ -48,5 +48,9 @@ https://github.com/fishnets/fishnets
 
 https://rpubs.com/laurie/744917
 
-## Results
+## Running
+
+The simulation were run in parallel as array jobs on a Portable Batch System (PBS) see 'runCom.R' for the code and 'runCOM.qsub' for the PBS script.
+
+
 
