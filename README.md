@@ -2,10 +2,9 @@
 
 ## Tasks
 
-Develop a reference dataset from the RAM legacy DB for a set of stocks where time series of stock status, catch and MSY and virgin biomass reference points are known. Develop priors for the production function, i.e. r, K, and shape. Develop depletion priors.
-Run SRA+ (or equivalent model framework) to create a reference ”best case” assessment for the RAM database using catch and a perfect index of abundance.
-Conduct a Value-of-Information analysis by running SRA+ (or equivalent model framework) using different approaches for deriving priors for i) depletion, ii) r, iii) K, iv) shape of the production function and data availability and quality for indices of abundance and catch
-Evaluate the ability of the different approaches to i) estimate current stock status relative to FMSY, BMSY and K, and ii) trends in abundance.
+A reference dataset was developd from the RAM legacy DB for a set of stocks where time series of stock status, catch and MSY reference points are known. Priors were developed for population growth rate (r) using FishBase. Priors for depletion were based on heuristics.
+
+JABBA, a biomass dynamic assessment model, was used to develop a catch-only model. This allows both data-poor and data-rich models to be run. A reference or ”best case” assessment was developed using catch and an unbiased index of abundance. This allows the value of using different approaches for deriving priors for final depletion and r to be evaluated. Rather than devloping a prior for virgin biomass a prior for initial depletion was developed as this is consistent with current practice. The impact of different assumptions about productuvity were also evaluated for different choices for the shape of the production function amd compare to current stock status relative to BMSY and FMSY
 
 ## Rationale
 
