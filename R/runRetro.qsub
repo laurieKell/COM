@@ -1,0 +1,31 @@
+#!/bin/sh
+## job name
+#PBS -J 1-85
+#PBS -N com
+## maximum runtime
+#PBS -l walltime=72:00:00 
+## select number of nodes, cpus (per node) and memory (per node)
+#PBS -l select=1:ncpus=8:mem=16gb 
+## standard output standard error
+#PBS -o runRetro.out
+#PBS -e runRetro.err
+
+### print details about job
+echo "This is job $PBS_JOBID"
+echo "The following ressources have been allocated"
+cat $PBS_NODEFILE
+
+### set working directory
+cd $HOME/com
+
+module purge
+module load anaconda3/personal
+source activate r4
+
+echo "Array Job is ${PBS_ARRAY_INDEX}"
+
+### run 
+R CMD BATCH --vanilla --quiet "--args ${PBS_ARRAY_INDEX}" $HOME/com/runRetro.R $HOME/com/runRetro.Rout$PBS_JOBID
+R CMD BATCH --vanilla --quiet "--args ${PBS_ARRAY_INDEX}" $HOME/com/runRetro.R $HOME/com/runRetro.Rout$PBS_JOBID
+
+echo "done!"

@@ -1,0 +1,865 @@
+---
+title: "FAO VoI" 
+subtitle: "Figures"
+author: "Laurence Kell"
+output: rmarkdown:::html_document
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEncoding{UTF-8}
+tags: FLPKG FLR
+license: Creative Commons Attribution-ShareAlike 4.0 International
+---
+Here are the time series for the new "RAM" DB, there are now 85 stocks, some with multiple assessments.
+
+Zig-Zags occur for Shaefer when r is high
+
+There are 6 plots of jabba-fits
+  + Jabba with stock/bmsy as an index + final depletion provided as a prior
+  + Jabba with stock/bmsy as an index
+  + Jabba-COM with known final and initial depletion
+  + Jabba-COM with known final and  heuristic for initial depletion
+  + Jabba-COM with known initial and  heuristic for final depletion
+  + Jabba-COM with heuristic for final & initial depletion 
+
+### JABBA defaults
+```{r}
+sa=list(assessment  ="com",
+        model.type  ="Pella",
+        sigma.proc  =TRUE,
+        igamma      = c(4,0.01),
+        proc.dev.all=TRUE,
+        sigma.est   =FALSE,
+        fixed.obsE  =0.05)
+```
+  
+```{r knitr_init, echo=FALSE, results="hide"}
+library(knitr)
+## Global options
+opts_chunk$set(echo    =FALSE,
+               eval    =TRUE,
+               cache   =TRUE,
+               cache.path="cache/figs/",
+               prompt  =FALSE,
+               comment =NA,
+               message =FALSE,
+               tidy    =FALSE,
+               warning =FALSE,
+               fig.height=6,
+               fig.width =6,
+               fig.path  ="../tex/figs/",
+               dev       ="png")
+
+options(digits=3)
+
+iFig=0
+```
+
+```{r, pkgs, echo=FALSE, message=FALSE}
+library(reshape)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+library(kobe)
+
+library(FLCore)
+library(FLife)
+library(popbio)
+library(mydas) 
+
+library(grid)
+```
+
+```{r, dir, echo=FALSE, message=FALSE}
+dirMy ="/home/laurence-kell/Desktop/papers/COM"
+dirDat=file.path(dirMy,"data")
+dirRes=file.path(dirMy,"results")
+dirInp=file.path(dirMy,"inputs") 
+```
+
+```{r}
+source("/home/laurence-kell/Desktop/flr/kobe/R/trend-plot.R")
+source('/home/laurence-kell/Desktop/flr/mpb/R//jabba-com.R') 
+```
+
+
+```{r}
+dirDat="/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/results"
+load(file.path(dirDat,"ts.RData")) 
+```
+
+```{r,eval=!TRUE}
+head(bioparams_values_views)
+```
+
+## Summary of Data
+
+```{r, ts-ssb, fig.height=4, fig.width=8}
+library(grid)
+
+trks=transmute(subset(ts,!is.na(stock)&year%in%1950:2012),year=year,series=stock,run=assessid)
+pts =ddply(trks,.(run), function(x) subset(trks,year==max(year))) 
+t1=trendPhaseMar(trks,pts,ylim=5,layer=geom_text(aes(x=1952,y=4.5,label="C")))
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $B:B_{MSY}$ for the RAM Legacy database.
+
+```{r, ts-f, fig.height=4, fig.width=8}
+library(grid) 
+
+trks=transmute(subset(ts,!is.na(stock)&year%in%1950:2012),year=year,series=harvest,run=assessid)
+pts =ddply(trks,.(run), function(x) subset(trks,year==max(year)))
+t2=trendPhaseMar(trks,pts,ylim=5,ylab=expression(F:F[MSY]),layer=geom_text(aes(x=1952,y=4.5,label="B")))
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of  $F:F_{MSY}$ for the RAM Legacy database.
+
+
+```{r, ts-c, fig.height=4, fig.width=8}
+library(grid)  
+load("/home/laurence-kell/Desktop/papers/COM2/data/msyts.RData")
+
+trks=transmute(subset(msy,year%in%1950:2012),run=scenario,year=year,series=series)
+pts =ddply(trks,.(run), function(x) subset(trks,year==max(year)))
+t3=trendPhaseMar(trks,pts,ylab=expression(Yield:MSY),ylim=5,layer=geom_text(aes(x=1952,y=4.5,label="A")))
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $Catch:MSY$ for the RAM Legacy database.
+
+
+```{r, kobe, fig.height=6, fig.width=6}
+kobe:::kobePhaseMar3(ddply(subset(ts,!is.na(stock)),.(assessid), with, {data.frame(
+  stock  =stock[length(stock)],
+  harvest=harvest[length(stock)])}),ylim=4,xlim=4)
+```
+
+**Figure `r iFig=iFig+1; iFig`** Kobe phase plot.
+
+```{r, stocks-1, fig.width=10,fig.height=3}
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData")
+
+com=subset(com,bmsyk!=0.2) 
+
+com=ddply(com,.(scenario,bmsyk), transform, productivity=ifelse(max(r)==r,"high","Low"))
+load(file.path(dirDat,"ts.RData"))
+
+nms=names(table(com$scenario))
+ggplot(data.frame(assessid=nms,scenario=substr(nms,1,12)))+
+  facet_wrap(~assessid,scale="free",ncol=10)+
+  geom_label(aes(1,1,label=scenario),size=2.5)+
+  theme_bw(0)
+```
+
+### Fits to perfect index
+
+```{r, stocks-2, fig.width=10,fig.height=8}
+ggplot(subset(com,perfect&depletion))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,stock,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+
+  theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $B:B_{MSY}$ for Jabba fit to perfect index and final depletion.
+
+
+```{r, stocks-3, fig.width=10,fig.height=8}
+ggplot(subset(com,perfect&!depletion))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,stock,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+
+  theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $B:B_{MSY}$ for Jabba fit to perfect index alone.
+
+
+### Fits to catch only
+```{r, stocks-4, fig.width=10,fig.height=8}
+ggplot(subset(com,!perfect&initial=="Actual"&final=="Actual"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,stock,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $B:B_{MSY}$ for Jabba-COM fit with actual initial and final depletion.
+
+
+```{r, stocks-5, fig.width=10,fig.height=6}
+ggplot(subset(com,!perfect&initial=="Heuristic"&final=="Actual"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,stock,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $B:B_{MSY}$ for Jabba-COM fit with heuistic for initial and actual final depletion.
+
+```{r, stocks-6, fig.width=10,fig.height=6}
+ggplot(subset(com,!perfect&initial=="Actual"&final=="Heuristic"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,stock,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $B:B_{MSY}$ for Jabba-COM fit with actual initial and heuristic for final depletion.
+
+
+```{r, stocks-7, fig.width=10,fig.height=6}
+ggplot(subset(com,!perfect&initial=="Heuristic"&final=="Heuristic"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,stock,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green"[-3])) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $B:B_{MSY}$ for Jabba-COM fit with heuristics for initial and final depletion.
+
+
+```{r, cf, fig.width=6,fig.height=6.5}
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData")
+
+com=subset(com,bmsyk!=0.2)
+com=transform(com,initial=factor(initial,labels=c("Initial Known","Heuristic")),
+                   final  =factor(final, labels=c("Final Known","Heuristic")))
+
+dat=ddply(subset(com,!is.na(om)&!is.na(stock)&!perfect),.(scenario), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final), transmute, data.frame(year=max(year),om=om[year==max(year)],mp=stock[year==max(year)]))
+dat=ddply(dat,.(scenario), transform, r=(r==max(r)))
+
+s4=ggplot(dat)+
+  facet_grid(initial~final)+
+  #geom_text(aes(x=x,y=y,label=label),data=data.frame(x=c(0.1,0.1,3.9,3.9),y=c(3.9,0.5,0.5,3.9),label=c("FP","TN","FN","TP")))+
+  geom_point(aes(om,mp,fill=as.character(bmsyk),shape=r))+
+  geom_smooth(aes(om,mp,col=as.character(bmsyk)),method="loess",se=FALSE)+
+  scale_colour_manual("Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_fill_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  geom_hline(aes(yintercept=1.0),col="red")+
+  geom_vline(aes(xintercept=1.0),col="red")+
+    geom_line(aes(x,y),data.frame(x=seq(0,3.75,0.01),y=seq(0,3.75,0.01)),linetype=2)+
+  theme_bw(10)+theme(legend.position="none")+
+  xlab("Data Rich")+ylab("Estimate")+
+  scale_shape_manual(values=c(21,22),label=c("Low","High"))
+s4 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Plots of estimates verses RAM values of $B/B_{MSY}$.
+
+
+
+```{r, cf2, fig.width=6,fig.height=6.5}
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData")
+
+com=subset(com,bmsyk!=0.2)
+com=transform(com,initial=factor(initial,labels=c("Initial Known","Heuristic")),
+                   final  =factor(final, labels=c("Final Known","Heuristic")))
+
+dat=ddply(subset(com,!is.na(om)&!is.na(stock)&!perfect),.(scenario), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final), transmute, data.frame(year=max(year),om=om[year==max(year)],mp=stock[year==max(year)]))
+dat=ddply(dat,.(scenario), transform, r=(r==max(r)))
+
+s4=ggplot(dat)+
+  facet_grid(initial~final)+
+  #geom_text(aes(x=x,y=y,label=label),data=data.frame(x=c(0.1,0.1,3.9,3.9),y=c(3.9,0.5,0.5,3.9),label=c("FP","TN","FN","TP")))+
+  geom_point(aes(om,mp,fill=as.character(bmsyk),shape=r))+
+  geom_smooth(aes(om,mp,col=as.character(bmsyk)),method="loess",se=FALSE)+
+  scale_colour_manual("Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_fill_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  geom_hline(aes(yintercept=1.0),col="red")+
+  geom_vline(aes(xintercept=1.0),col="red")+
+    geom_line(aes(x,y),data.frame(x=seq(0,3.75,0.01),y=seq(0,3.75,0.01)),linetype=2)+
+  theme_bw(10)+theme(legend.position="none")+
+  xlab("Data Rich")+ylab("Estimate")+
+  scale_shape_manual(values=c(21,22),label=c("Low","High"))
+s4 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Plots of estimates verses RAM values of $B/B_{MSY}$.
+
+
+```{r, cf-jabba, fig.width=6,fig.height=6.5}
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData")
+
+com=subset(com,bmsyk!=0.2)
+
+dat=ddply(subset(com,!is.na(om)&!is.na(stock)&perfect&!depletion),.(scenario), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r), transmute, data.frame(year=max(year),om=om[year==max(year)],mp=stock[year==max(year)]))
+dat=ddply(dat,.(scenario), transform, r=(r==max(r)))
+
+ggplot(dat)+ 
+  geom_text(aes(x=x,y=y,label=label),data=data.frame(x=c(0,0,4,4),y=c(4,0.5,0.5,4),label=c("FP","TN","FN","TP")))+
+  geom_point(aes(om,mp,fill=as.character(bmsyk),shape=r))+
+  geom_smooth(aes(om,mp,col=as.character(bmsyk)),method="loess",se=FALSE)+
+  scale_colour_manual("Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_fill_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  geom_hline(aes(yintercept=1.0),col="red")+
+  geom_vline(aes(xintercept=1.0),col="red")+
+  geom_line(aes(x,y),data.frame(x=seq(0,3.75,0.01),y=seq(0,3.75,0.01)),linetype=2)+
+  theme_bw(10)+theme(legend.position="bottom")+
+  xlab("Data Rich")+ylab("Estimate")+
+  scale_shape_manual(values=c(21,22),label=c("Low","High"))
+```
+
+**Figure `r iFig=iFig+1; iFig`** JABBA plots of estimates verses RAM values of $B/B_{MSY}$.
+
+```{r, fig-4, fig.width=6,fig.height=6.5}
+load("/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/results/withIndx.RData")
+
+dat=subset(withIndx,!is.na(index))
+dat=ddply(dat,.(scenario,bmsyk,r), subset, year>=max(year))
+dat=ddply(dat,.(scenario,bmsyk,r), transmute, data.frame(year==max(year),om=mean(index),mp=mean(stock)))
+dat=ddply(dat,.(scenario), transform, r=(r==max(r)))
+
+s1=ggplot(dat)+
+  geom_text(aes(x=x,y=y,label=label),data=data.frame(x=c(0,0,4,4),y=c(4,0.5,0.5,4),label=c("FP","TN","FN","TP")))+
+  geom_point(aes(om,mp,fill=as.character(bmsyk),shape=r))+
+  geom_smooth(aes(om,mp,col=as.character(bmsyk)),method="loess",se=FALSE,span=1)+
+  scale_colour_manual("Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_fill_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  geom_hline(aes(yintercept=1.0),col="red")+
+  geom_vline(aes(xintercept=1.0),col="red")+
+  geom_line(aes(x,y),data.frame(x=seq(0,3.75,0.01),y=seq(0,3.75,0.01)),linetype=2)+
+  theme_bw(10)+theme(legend.position="bottom")+
+  xlab("Data Rich")+ylab("Estimate")+
+  scale_shape_manual(values=c(21,22),label=c("Low","High"))
+s1 
+```
+
+**Figure `r iFig=iFig+1; iFig`** JABBA plots of estimates verses RAM values of $B/B_{MSY}$. xxx
+
+```{r}
+load(file.path(dirDat,"ts.RData"))
+
+heuristic=ddply(subset(ts,!is.na(catch)&!is.na(stock)),.(assessid), with, 
+                data.frame("Heuristic"=dFinalPrior(catch),
+                           "Actual"   =stock[year==max(year)]))
+heuristic=with(heuristic,mydas:::roc(Actual>1,Heuristic))
+```
+
+```{r, roc, fig.width=7, fig.height=6.5}
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData") #file.path(dirRes,"com.RData"))
+com=subset(com,bmsyk!=0.2)
+com=transform(com,initial=factor(initial,labels=c("Initial Known","Heuristic")),
+                   final  =factor(final,  labels=c("Final Known","Heuristic"))) 
+  
+dat=subset(com,!is.na(om)&!is.na(stock)&!perfect)
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final),transmute, 
+          data.frame(year=max(year),om=om[year==max(year)],mp=stock[year==max(year)]))
+dat=ddply(dat,.(scenario,bmsyk),transform,r=r>min(r))
+roc=ddply(dat,.(bmsyk,r,initial,final),with, mydas:::roc(om>1,mp))
+ref=ddply(roc,.(bmsyk,r,initial,final), transform, ss=FPR^2+(1-TPR)^2)
+ref=ddply(ref,.(bmsyk,r,initial,final), subset, ss==min(ss))
+
+ref1=ddply(roc, .(bmsyk,r,initial,final), subset, abs(reference-1)==min(abs(reference-1)))
+
+b4=ggplot(roc)+
+  geom_line(aes(FPR,TPR),data=heuristic,col="purple")+
+  facet_grid(initial~final)+
+  geom_path(aes( FPR,TPR,col=as.character(bmsyk),linetype=r))+
+  #geom_point(aes(FPR,TPR,shape= "1",fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref, size=4)+
+  geom_point(aes(FPR,TPR,fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref1,size=4)+
+  geom_line(aes(x,y),data.frame(x=seq(0,1,0.01),y=seq(0,1,0.01)))+
+  #scale_shape_manual(   "Reference",          values=c(22,21)[2],       labels=c("Best","BMSY")[2])+
+  scale_linetype_manual("r Prior",            values=c(1,2),         labels=c("High","Low"))+
+  scale_fill_manual(    "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_colour_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  theme_bw()+
+  theme(legend.position="none") 
+b4
+
+save(roc,file="/home/laurence-kell/Desktop/tmp/roc1.RData")
+```
+
+```{r}
+library(DescTools)
+
+load("/home/laurence-kell/Desktop/tmp/roc1.RData")
+
+roc$r=c("Low","High")[as.numeric(roc$r)+1]
+cast(ddply(roc,.(final,initial,bmsyk,r), with, round(AUC(FPR,TPR),2)),final+initial~bmsyk+r,value="V1")
+```
+
+**Figure `r iFig=iFig+1; iFig`** ROC curves for JABBA-COM, columns are Initial and rows Final depeletion derivation.
+
+```{r}
+save(roc,heuristic,ref,ref1,file="/home/laurence-kell/Desktop/tmp/roc.RData") 
+```
+
+
+```{r, roc-jabba, fig.width=6, fig.height=6.5}
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData") #file.path(dirRes,"com.RData"))
+com=subset(com,bmsyk!=0.2)
+
+dat=subset(com,perfect&depletion)
+dat=ddply(subset(dat,!is.na(om)&!is.na(stock)),.(scenario,perfect,depletion,bmsyk,r,initial,final), subset, year==max(year))
+dat=ddply(dat,.(scenario,perfect,depletion,bmsyk,r,initial,final),transmute, data.frame(year=max(year),om=om[year==max(year)],mp=stock[year==max(year)]))
+dat=ddply(dat,.(scenario,bmsyk),transform,r=r>min(r))
+roc=ddply(dat,.(perfect,depletion,bmsyk,r,initial,final),with, mydas:::roc(om>1,mp))
+#roc$r=c("High","Low")[roc$r]
+
+ref=ddply(roc,.(bmsyk,r), transform, ss=FPR^2+(1-TPR)^2)
+ref=ddply(ref,.(bmsyk,r), subset, ss==min(ss))
+
+ref1=ddply(subset(roc,perfect&depletion), .(bmsyk,r), subset, abs(reference-1)==min(abs(reference-1)))
+
+b1=ggplot(subset(roc,perfect&depletion))+
+  geom_line(aes(FPR,TPR),data=heuristic,col="purple")+
+  geom_path(aes( FPR,TPR,col=as.character(bmsyk),linetype=r))+
+  #geom_point(aes(FPR,TPR,shape= "1",fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref, size=4)+
+  geom_point(aes(FPR,TPR,fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref1,size=4,,shape=21)+
+  geom_line(aes(x,y),data.frame(x=seq(0,1,0.01),y=seq(0,1,0.01)))+
+  #scale_shape_manual(   "Reference",          values=c(22,21)[2],       labels=c("Best","BMSY")[2])+
+  scale_linetype_manual("r Prior",            values=c(1,2),         labels=c("High","Low"))+
+  scale_fill_manual(    "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_colour_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  theme_bw()+
+  theme(legend.position="bottom")
+b1
+```
+
+**Figure `r iFig=iFig+1; iFig`** ROC curves for JABBA
+
+
+```{r}
+library(DescTools)
+with(heuristic, AUC(FPR,TPR))
+```
+
+```{r, fig-5, fig.width=6, fig.height=6.5}
+load("/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/results/withIndx.RData")
+names(withIndx)[c(3,6)]=c("mp","om")
+
+dat=ddply(subset(withIndx,!is.na(om)&!is.na(mp)),.(scenario,bmsyk,r), subset, year==max(year))
+
+dat=ddply(dat,.(scenario,bmsyk,r),subset, year>=max(year))
+dat=ddply(dat,.(scenario,bmsyk,r),transmute, data.frame(year=max(year),om=mean(om),mp=mean(mp)))
+dat=ddply(dat,.(scenario,bmsyk),transform,r=r>min(r))
+roc=ddply(dat,.(bmsyk,r),with, mydas:::roc(om>1,mp))
+
+ref=ddply(roc,.(bmsyk,r), transform, ss=FPR^2+(1-TPR)^2)
+ref=ddply(ref,.(bmsyk,r), subset, ss==min(ss))
+
+ref1=ddply(roc, .(bmsyk,r), subset, abs(reference-1)==min(abs(reference-1)))
+
+ggplot(roc)+
+  geom_line(aes(FPR,TPR),data=heuristic,col="purple")+
+  geom_path(aes( FPR,TPR,col=as.character(bmsyk),linetype=r))+
+  #geom_point(aes(FPR,TPR,shape= "1",fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref, size=4)+
+  geom_point(aes(FPR,TPR,fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref1,size=4,shape=21)+
+  geom_line(aes(x,y),data.frame(x=seq(0,1,0.01),y=seq(0,1,0.01)))+
+  #scale_shape_manual(   "Reference",          values=c(22,21)[2],       labels=c("Best","BMSY")[2])+
+  scale_linetype_manual("r Prior",            values=c(1,2),         labels=c("High","Low"))+
+  scale_fill_manual(    "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_colour_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  theme_bw()+
+  theme(legend.position="bottom")
+
+save(roc,file="/home/laurence-kell/Desktop/tmp/roc2.RData")
+```
+
+```{r}
+library(DescTools)
+
+load("/home/laurence-kell/Desktop/tmp/roc2.RData")
+
+head(roc)
+roc$r=c("Low","High")[as.numeric(roc$r)+1]
+cast(ddply(roc,.(bmsyk,r), with, round(AUC(FPR,TPR),2)),bmsyk~r)
+```
+
+**Figure `r iFig=iFig+1; iFig`** ROC curves for JABBA
+
+## Fishing Mortality
+
+### Fits to perfect index
+
+```{r, harvest-2, fig.width=10,fig.height=8}
+dirDat="/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/results"
+load(file.path(dirDat,"ts.RData"))
+load("/home/laurence-kell/Desktop/papers/COM2/data/trfmo.RData")
+
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData")
+
+com=subset(com,bmsyk!=0.2)
+
+com=merge(com,rbind(transmute(ts,   scenario=assessid,year=year,om.f=harvest),
+                    transmute(trfmo,scenario=assessid,year=year,om.f=harvest))
+                    ,x.all=TRUE)
+com=ddply(com,.(scenario,bmsyk), transform, productivity=ifelse(max(r)==r,"high","Low"))
+nms=names(table(com$scenario))
+
+ggplot(subset(com,perfect&depletion))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,harvest,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om.f))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+
+  theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $F:F_{MSY}$ for Jabba fit to perfect index and final depletion.
+
+
+```{r, harvest-3, fig.width=10,fig.height=8}
+ggplot(subset(com,perfect&!depletion))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,harvest,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om.f))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+
+  theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $F:F_{MSY}$ for Jabba fit to perfect index alone.
+
+
+### Fits to catch only
+```{r, harvest-4, fig.width=10,fig.height=8}
+ggplot(subset(com,!perfect&initial=="Actual"&final=="Actual"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,harvest,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om.f))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $F:F_{MSY}$ for Jabba-COM fit with actual initial and final depletion.
+
+
+```{r, harvest-5, fig.width=10,fig.height=6}
+ggplot(subset(com,!perfect&initial=="Heuristic"&final=="Actual"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,harvest,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om.f))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $F:F_{MSY}$ for Jabba-COM fit with heuistic for initial and actual final depletion.
+
+```{r, harvest-6, fig.width=10,fig.height=6}
+ggplot(subset(com,!perfect&initial=="Actual"&final=="Heuristic"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,harvest,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om.f))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green")[-3]) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $F:F_{MSY}$ for Jabba-COM fit with actual initial and heuristic for final depletion.
+
+
+```{r, harvest-7, fig.width=10,fig.height=6}
+ggplot(subset(com,!perfect&initial=="Heuristic"&final=="Heuristic"))+
+  facet_wrap(~scenario,scale="free",ncol=10)+
+  geom_line(aes(year,harvest,col=as.character(bmsyk),linetype=productivity))+
+  geom_line(aes(year,om.f))+
+  geom_hline(aes(yintercept=y),col="yellow",data=data.frame(y=1.2,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="orange",data=data.frame(y=1.0,scenario=nms))+
+  geom_hline(aes(yintercept=y),col="red",   data=data.frame(y=0.8,scenario=nms))+
+  theme_bw(0)+theme(legend.position="bottom")+
+  scale_color_manual("Ratio between BMSY and K",values=c("red","blue","green"[-3])) 
+```
+
+**Figure `r iFig=iFig+1; iFig`** Time series of $F:F_{MSY}$ for Jabba-COM fit with heuristics for initial and final depletion.
+
+
+```{r, cf-harvest, fig.width=6,fig.height=6.5}
+com=subset(com,bmsyk!=0.2)
+com=transform(com,initial=factor(initial,labels=c("Initial Known","Heuristic")),
+                   final  =factor(final,  labels=c("Final Known","Heuristic")))
+
+dat=ddply(subset(com,!is.na(om)&!is.na(stock)&!perfect),.(scenario), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final), transmute, data.frame(year=max(year),om=om.f[year==max(year)],mp=harvest[year==max(year)]))
+
+ggplot(dat)+
+  facet_grid(initial~final)+
+  geom_text(aes(x=x,y=y,label=label),data=data.frame(x=c(0,0,4,4),y=c(4,0.5,0.5,4),label=c("FP","TN","FN","TP")))+
+  geom_point(aes(om,mp,fill=as.character(bmsyk)),shape=21)+
+  geom_smooth(aes(om,mp,col=as.character(bmsyk)),method="loess",se=FALSE)+
+  scale_colour_manual("Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_fill_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  geom_hline(aes(yintercept=1.0),col="red")+
+  geom_vline(aes(xintercept=1.0),col="red")+
+    geom_line(aes(x,y),data.frame(x=seq(0,3.75,0.01),y=seq(0,3.75,0.01)),linetype=2)+
+  theme_bw()+theme(legend.position="bottom")+
+  xlab("Data Rich")+ylab("Estimate")
+```
+
+**Figure `r iFig=iFig+1; iFig`** Plots of estimates verses RAM values of $F/F_{MSY}$.
+
+
+```{r, cf-jabba-harvest, fig.width=6,fig.height=6.5}
+ggplot(dat)+
+  geom_text(aes(x=x,y=y,label=label),data=data.frame(x=c(0,0,4,4),y=c(4,0.5,0.5,4),label=c("FP","TN","FN","TP")))+
+  geom_point(aes(om,mp,fill=as.character(bmsyk)),shape=21)+
+  geom_smooth(aes(om,mp,col=as.character(bmsyk)),method="loess",se=FALSE)+
+  scale_colour_manual("Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_fill_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  geom_hline(aes(yintercept=1.0),col="red")+
+  geom_vline(aes(xintercept=1.0),col="red")+
+  geom_line(aes(x,y),data.frame(x=seq(0,3.75,0.01),y=seq(0,3.75,0.01)),linetype=2)+
+  theme_bw(10)+theme(legend.position="bottom")+
+  xlab("Data Rich")+ylab("Estimate")
+```
+
+**Figure `r iFig=iFig+1; iFig`** JABBA plots of estimates verses RAM values of $F/F_{MSY}$.
+
+
+```{r}
+load(file.path(dirDat,"ts.RData"))
+
+heuristic=ddply(subset(ts,!is.na(catch)&!is.na(stock)),.(assessid), with, 
+                data.frame("Heuristic"=dFinalPrior(catch),
+                           "Actual"   =stock[year==max(year)]))
+heuristic=with(heuristic,mydas:::roc(Actual>1,Heuristic))
+```
+
+```{r, roc-harvest, fig.width=7, fig.height=6.5}
+com=transform(com,initial=factor(initial,labels=c("Initial Known","Heuristic")),
+                   final =factor(final,  labels=c("Final Known","Heuristic")))
+
+  
+dat=subset(com,!is.na(om)&!is.na(harvest)&!perfect)
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final),transmute, 
+          data.frame(year=max(year),om=om[year==max(year)],mp=harvest[year==max(year)]))
+dat=ddply(dat,.(scenario,bmsyk),transform,r=r>min(r))
+roc=ddply(dat,.(bmsyk,r,initial,final),with, mydas:::roc(om>1,mp))
+ref=ddply(roc,.(bmsyk,r,initial,final), transform, ss=FPR^2+(1-TPR)^2)
+ref=ddply(ref,.(bmsyk,r,initial,final), subset, ss==min(ss))
+
+ref1=ddply(roc, .(bmsyk,r,initial,final), subset, abs(reference-1)==min(abs(reference-1)))
+
+f4=ggplot(roc)+
+  #geom_line(aes(FPR,TPR),data=heuristic,col="purple")+
+  facet_grid(initial~final)+
+  geom_path(aes( FPR,TPR,col=as.character(bmsyk),linetype=r))+
+  #geom_point(aes(FPR,TPR,shape= "1",fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref, size=4)+
+  geom_point(aes(FPR,TPR,fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref1,size=4,shape=21)+
+  geom_line(aes(x,y),data.frame(x=seq(0,1,0.01),y=seq(0,1,0.01)))+
+  #scale_shape_manual(   "Reference",          values=c(22,21)[2],    labels=c("Best","BMSY"))+
+  scale_linetype_manual("r Prior",            values=c(1,2),         labels=c("High","Low"))+
+  scale_fill_manual(    "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_colour_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  theme_bw()+
+  theme(legend.position="none") 
+f4
+```
+
+
+```{r}
+library(DescTools)
+
+roc$r=c("Low","High")[as.numeric(roc$r)+1]
+cast(ddply(roc,.(final,initial,bmsyk,r), with, round(AUC(FPR,TPR),2)),final+initial~bmsyk+r,value="V1")
+```
+
+**Figure `r iFig=iFig+1; iFig`** ROC curves for JABBA-COM, columns are Initial and rows Final depeletion derivation.
+
+
+```{r, roc-jabba-harvest, fig.width=6, fig.height=6.5}
+dat=subset(com,perfect&depletion)
+dat=ddply(subset(dat,!is.na(om)&!is.na(harvest)),.(scenario,perfect,depletion,bmsyk,r,initial,final), subset, year==max(year))
+dat=ddply(dat,.(scenario,perfect,depletion,bmsyk,r,initial,final),transmute, data.frame(year=max(year),om=om[year==max(year)],mp=harvest[year==max(year)]))
+dat=ddply(dat,.(scenario,bmsyk),transform,r=r>min(r))
+roc=ddply(dat,.(perfect,depletion,bmsyk,r,initial,final),with, mydas:::roc(om>1,mp))
+#roc$r=c("High","Low")[roc$r]
+
+ref=ddply(roc,.(bmsyk,r), transform, ss=FPR^2+(1-TPR)^2)
+ref=ddply(ref,.(bmsyk,r), subset, ss==min(ss))
+
+ref1=ddply(subset(roc,perfect&depletion), .(bmsyk,r), subset, abs(reference-1)==min(abs(reference-1)))
+
+ggplot(subset(roc,perfect&depletion))+
+  #geom_line(aes(FPR,TPR),data=heuristic,col="purple")+
+  geom_path(aes( FPR,TPR,col=as.character(bmsyk),linetype=r))+
+  #geom_point(aes(FPR,TPR,shape= "1",fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref, size=4)+
+  geom_point(aes(FPR,TPR,fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref1,size=4,shape=21)+
+  geom_line(aes(x,y),data.frame(x=seq(0,1,0.01),y=seq(0,1,0.01)))+
+  #scale_shape_manual(   "Reference",          values=c(22,21)[2],       labels=c("Best","BMSY"))+
+  scale_linetype_manual("r Prior",            values=c(1,2),         labels=c("High","Low"))+
+  scale_fill_manual(    "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_colour_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  theme_bw()+
+  theme(legend.position="bottom")
+```
+
+**Figure `r iFig=iFig+1; iFig`** ROC curves for JABBA
+
+
+```{r, roc-jabba-harvest-index0.5, fig.width=6, fig.height=6.5}
+load("/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/results/withIndx.RData")
+load("/home/laurence-kell/Desktop/papers/COM2/results/com.RData")
+dirDat="/home/laurence-kell/Desktop/projects/fao/VoI/Report/FAO-VoI/results"
+load(file.path(dirDat,"ts.RData"))
+names(ts)[2]="scenario" 
+
+dat=merge(withIndx,ts[,c("scenario","year","harvest")],by=c("scenario","year"))
+names(dat)[c(4,9)]=c("mp","om")
+
+dat=ddply(subset(dat,!is.na(om)&!is.na(mp)),.(scenario,bmsyk,r), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r),transmute, data.frame(year=max(year),om=om[year==max(year)],mp=mp[year==max(year)]))
+dat=ddply(dat,.(scenario,bmsyk),transform,r=r>min(r))
+roc=ddply(dat,.(bmsyk,r),with, mydas:::roc(om>1,mp))
+#roc$r=c("High","Low")[roc$r]
+
+ref1=ddply(roc, .(bmsyk,r), subset, abs(reference-1)==min(abs(reference-1)))
+
+f1=ggplot(subset(roc))+
+  #geom_line(aes(FPR,TPR),data=heuristic,col="purple")+
+  geom_path(aes( FPR,TPR,col=as.character(bmsyk),linetype=r))+
+  #geom_point(aes(FPR,TPR,shape= "1",fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref, size=4)+
+  geom_point(aes(FPR,TPR,fill=as.character(bmsyk),col=as.character(bmsyk),linetype=r),data=ref1,size=4,shape=21)+
+  geom_line(aes(x,y),data.frame(x=seq(0,1,0.01),y=seq(0,1,0.01)))+
+  #scale_shape_manual(   "Reference",          values=c(22,21)[2],       labels=c("Best","BMSY"))+
+  scale_linetype_manual("r Prior",            values=c(1,2),         labels=c("High","Low"))+
+  scale_fill_manual(    "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  scale_colour_manual(  "Production Function",values=c("green","red","blue")[-1],labels=c("Pella","Fox","Schaefer")[-1])+
+  theme_bw()+
+  theme(legend.position="bottom")
+f1
+```
+
+
+```{r}
+library(DescTools)
+
+roc$r=c("Low","High")[as.numeric(roc$r)+1]
+cast(ddply(roc,.(bmsyk,r), with, round(AUC(FPR,TPR),2)),bmsyk~r,value="V1")
+```
+
+**Figure `r iFig=iFig+1; iFig`** ROC curves for JABBA with half index
+
+
+```{r, retro, fig.width=6, fig.height=6.5}
+load("/home/laurence-kell/Desktop/papers/COM2/results/retro.RData")
+
+dat=merge(transform(subset(retro,tail==year),y=stock)[    ,c("scenario", "bmsyk","r","perfect","year","run","y")],
+            transform(subset(retro,tail==max(year)),x=stock)[,c("scenario", "bmsyk","r","perfect","year","run","x")])
+  
+ret=ddply(dat,.(scenario,bmsyk,r,perfect,run),with, mean((y-x)/x))
+
+ggplot(transform(subset(ret,run%in%c(1,2,4)),run=factor(run,labels=c("With Index","COM with Depletion Known","COM with Heuristic"))))+
+  geom_histogram(aes(V1))+facet_grid(run~.)+theme_bw()+
+  xlab("Mohn's rho")+ylab("")
+```
+
+
+```{r}
+load("/home/laurence-kell/Desktop/papers/COM2/results/retro.RData")
+
+com=subset(com,bmsyk!=0.2)
+com=transform(com,initial=factor(initial,labels=c("Initial Known","Heuristic")),
+                   final  =factor(final, labels=c("Final Known",  "Heuristic")))
+com=ddply(com,.(scenario,bmsyk), transform, r=ifelse(r==max(r),"high","low"))
+
+dat=ddply(subset(com,!is.na(om)&!is.na(stock)&!perfect),.(scenario), subset, year==max(year))
+dat=ddply(dat,.(scenario,bmsyk,r,initial,final), transmute, data.frame(year=max(year),om=om[year==max(year)],mp=stock[year==max(year)]))
+
+tm=ddply(dat,.(initial,final,bmsyk,r), with, cor(om,mp))
+cast(tm,initial+final~bmsyk+r,value="V1",mean)
+
+tm=ddply(dat,.(initial,final,bmsyk,r), with, cor(order(om),order(mp)))
+cast(tm,initial+final~bmsyk+r,value="V1",mean)
+```
+
+`r round(runif(1,1,350)) `
+
+
+
+```{r, fig.height=4,fig.width=8}
+library(ggpubr)
+ggarrange(s1,
+          ggarrange(s4, labels = c("B")), 
+          nrow = 1,ncol=2,
+          labels = "A",
+          common.legend = TRUE) 
+```
+
+
+```{r, fig.height=4,fig.width=8}
+library(ggpubr) 
+ggarrange(b1,     
+          ggarrange(b4, labels = c("B")), 
+          nrow = 1,ncol=2,
+          labels = "A",
+          common.legend = TRUE) 
+```
+
+
+```{r, fig.height=4,fig.width=8}
+library(ggpubr) 
+ggarrange(f1,                      
+          ggarrange(f4, labels = c("B")), 
+          nrow = 1,ncol=2,
+          labels = "A" ,
+          common.legend = TRUE) 
+```
+
+
+```{r, ts, fig.width=6, fig.height=10}
+library(grid)  
+library(gridExtra)
+
+vplayout<-function(x, y)
+      viewport(layout.pos.row = x, layout.pos.col = y)
+    
+grid.newpage()
+
+pushViewport(viewport(layout = grid.layout(15, 6)))
+print(t3[[2]]+coord_flip(xlim=c(0,5)), vp=vplayout( 2: 5,6))    
+print(t2[[2]]+coord_flip(xlim=c(0,5)), vp=vplayout( 7:10,6))    
+print(t1[[2]]+coord_flip(xlim=c(0,5)), vp=vplayout(12:15,6))    
+
+print(t3[[1]], vp=vplayout(2:5,   1:5))             
+print(t2[[1]], vp=vplayout(2:5+5,1:5))                     
+print(t1[[1]], vp=vplayout(2:5+10, 1:5))                     
+```
+

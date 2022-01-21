@@ -30,7 +30,7 @@ load(file.path(dirMy,"ts.RData"))
 load(file.path(dirMy,"pd.RData"))
 
 i=as.numeric(commandArgs(trailingOnly=TRUE)[1])
-#if (is.na(i)) i=4
+if (is.na(i)) i=4
 
 scenario=unique(ts$assessid)[i]
 species =subset(ts,assessid==scenario)$species[1]
@@ -45,11 +45,11 @@ ctrl=mdply(expand.grid(r=c("low","high"),bmsyk=c(0.5,0.37,0.2)), function(r,bmsy
       c("r"=r)})
 
 catch=as.FLQuant(transmute(subset(ts,assessid==scenario),year=year,data=catch))
-index=as.FLQuant(transmute(subset(ts,assessid==scenario),year=year,data=stock))
-index=window(index,end=max(dimnames(index[!is.na(index)])$year))
-catch=window(catch,end=max(dimnames(index)$year))
+catch=window(catch,end=max(dimnames(catch)$year[!is.na(catch)]))
 catch[is.na(catch)]=min(catch,na.rm=T)*0.001
 catch[catch==0]    =min(catch[catch>0],na.rm=T)*0.001
+index=as.FLQuant(transmute(subset(ts,assessid==scenario),year=year,data=stock))
+index=window(index,end=max(dimnames(catch)$year))
 
 if (scenario%in%c("NIWA-GSTRGZRSTA7-1964-2007-CORDUE","NWWG-GHALV-VI-XII-XIV-1960-2018-ICESIMP2018"))
   catch=catch/mean(catch)*1000
@@ -71,6 +71,44 @@ r0<-foreach(j=seq(dim(ctrl)[1]),
               
             rtn}
 save(r0,file=file.path(dirRes,paste(scenario,"r0.RData",sep="_")))
+
+
+## Perfect fits
+r0.1<-foreach(j=seq(dim(ctrl)[1]), 
+            .combine=rbind.fill,
+            .multicombine=TRUE,
+            .export =ls(globalenv()),
+            .packages=c("FLCore","FLasher","FLBRP","ggplotFL","plyr","dplyr","reshape","mpb","JABBA")) %dopar%{
+              
+              source(file.path(dirFlr,'jabba-coerce.R'))
+              source(file.path(dirFlr,'jabba-com.R'))
+              
+              rtn=jabbaCOM(catch,r=ctrl[j,"r"],bmsyk=ctrl[j,"bmsyk"],
+                           b0=ifelse(is.na(c(index[,1])),1,c(index[,1])),
+                           bfinal=c(index[,dim(index)[2]]),index=index)
+            
+              ind=index
+              ind[,seq(dim(ind)[2]-round(dim(index)[2]/2))]=NA
+              rtn=jabbaCOM(catch,r=ctrl[j,"r"],bmsyk=ctrl[j,"bmsyk"],
+                           b0=ifelse(is.na(c(index[,1])),1,c(index[,1])),
+                           bfinal=c(index[,dim(index)[2]]),
+                           index=ind)
+              rtn.5=jabbaCOM(catch,r=ctrl[j,"r"],bmsyk=ctrl[j,"bmsyk"],
+                                b0=ifelse(is.na(c(index[,1])),1,c(index[,1])),
+                                bfinal=FALSE,
+                                index=ind)
+              
+              rtn=rbind.fill(cbind(run="COM",rtn.10.),
+                             cbind(run="+Index",rtn.5))
+              
+              rtn=merge(rtn,as.data.frame(index,drop=T),by="year")
+              ggplot(rtn)+
+                geom_point(aes(year,index))+
+                geom_line(aes(year,stock,col=run))+
+                geom_line(aes(year,data))
+              
+              rtn}
+save(r0.1,file=file.path(dirRes,paste(scenario,"r0.1.RData",sep="_")))
 
 r1<-foreach(j=seq(dim(ctrl)[1]), 
             .combine=rbind.fill,
