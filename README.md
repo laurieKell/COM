@@ -1,4 +1,13 @@
 # Catch-only Models
+
+## Tasks
+
+A reference dataset was developd from the RAM legacy DB for a set of stocks where time series of stock status, catch and MSY reference points are known. Priors were developed for population growth rate (r) using FishBase. Priors for depletion were based on heuristics.
+
+JABBA, a biomass dynamic assessment model, was used to develop a catch-only model. This allows both data-poor and data-rich models to be run. A reference or ”best case” assessment was developed using catch and an unbiased index of abundance. This allows the value of using different approaches for deriving priors for final depletion and r to be evaluated. Rather than devloping a prior for virgin biomass a prior for initial depletion was developed as this is consistent with current practice. The impact of different assumptions about productuvity were also evaluated for different choices for the shape of the production function amd compare to current stock status relative to BMSY and FMSY
+
+## Rationale
+
 Catch-only models have been the focus of much recent research into data-poor stock assessment methods. A reason for this is because they are useful for providing summaries of the state of fisheries on both a regional and global scale. However, results are highly sensitive to the choice of priors for initial and final depletion. Therefore there are multiple implementattions of catch-only models with different heuristic to generate depletion priors. There is therefore a need for 
 model validation to increases confidence in the outputs of these models and to identify model limitations that should be addressed in future research.
 
@@ -9,6 +18,7 @@ We configure the JABBA state-space biomass dynamic model (https://github.com/jab
 To evaluate the ability of the models, and the value of additional infomation, to provide estimates of current depletion we use Receiver Operating Characteristic (ROC) curves to evaluate the ability of models to classify and rank stocks with respect to being overfished. 
 
 Results are found at https://rpubs.com/laurie/744918 and a draft manuscript describing the work can be found on Overleaf (https://www.overleaf.com/read/kwctdqrjftwd)
+
 
 ## Code
 
@@ -53,6 +63,3 @@ The life history parameters were obtained from https://github.com/fishnets/fishn
 ## Running
 
 The simulation were run in parallel as array jobs on a Portable Batch System (PBS) see 'runCom.R' for the code and 'runCOM.qsub' for the PBS script, and `process.R` summarises the results
-
-
-
