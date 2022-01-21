@@ -1,5 +1,7 @@
 # Catch-only Models
 
+The manuscript is on github at https://github.com/laurieKell/VoI-FAO-Frontiers-original-revision
+
 ## Tasks
 
 A reference dataset was developd from the RAM legacy DB for a set of stocks where time series of stock status, catch and MSY reference points are known. Priors were developed for population growth rate (r) using FishBase. Priors for depletion were based on heuristics.
